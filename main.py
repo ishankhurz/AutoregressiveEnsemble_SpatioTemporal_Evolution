@@ -6,7 +6,7 @@ Created on Fri Apr 26 09:08:39 2024
 @author: ishan
 """
 
-##Import modules
+## Import modules
 import time
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,45 +15,46 @@ import torch.nn.functional as F
 #from torch.optim.lr_scheduler import ExponentialLR, CosineAnnealingLR
 import model_forward, model_forward_conv
 #from torch.utils.data import TensorDataset, DataLoader
-from utils import (imgdata_loader, save_checkpoint, conv_forward_pass_unet, 
-                   recursive_pred_unet, recursive_pred_moe, addition_moe_forward_pass)
+from utils import (imgdata_loader, recursive_pred_moe, addition_moe_forward_pass)
 from models import Unet2D
 
 
-##Set device
+## Set device
 torch.cuda.empty_cache()    
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-gpu = False
+## Set file-paths for all datasets
+dataset = 'micro'
 
+if dataset == 'planetswe':
+    data_dir = '/Users/ishan/JHU/Data/HighDim_datasets/datasets/planetswe/data_proc/'
+    path_ip_test = data_dir + 'inputs_test_planetswe_96traj_50steps_udim1_timelb3.npz'
+    path_op_test = data_dir + 'outputs_test_planetswe_96traj_50steps_udim1_timelb3.npz'
+    path_load_test = data_dir + 'params_test_planetswe_96traj_50steps_udim1_timelb3.npz'
+    stats = np.load(data_dir+'stats_commonnorm_planetswe_96traj_50steps_udim1.npz', allow_pickle=True)
 
-##Set file-paths for all datasets
-data_dir = '/Users/ishan/JHU/Data/HighDim_datasets/datasets/planetswe/data_proc/'
-#path_ip_test = data_dir + 'inputs_test_planetswe_96traj_50steps_udim1_timelb3.npz'
-#path_op_test = data_dir + 'outputs_test_planetswe_96traj_50steps_udim1_timelb3.npz'
-#path_load_test = data_dir + 'params_test_planetswe_96traj_50steps_udim1_timelb3.npz'
-stats = np.load(data_dir+'stats_commonnorm_planetswe_96traj_50steps_udim1.npz', allow_pickle=True)
-
-
-data_dir = '/Users/ishan/JHU/Data/HighDim_datasets/datasets/gray_scott_reaction_diffusion/data_proc/'
-#path_ip_test = data_dir + 'inputs_test_grayscott_960traj_1to50stepsinc1_speciesA_timelb5.npz'
-#path_op_test = data_dir + 'outputs_test_grayscott_960traj_1to50stepsinc1_speciesA_timelb5.npz'
-#path_load_test = data_dir + 'params_test_grayscott_960traj_1to50stepsinc1_speciesA_timelb5.npz'
-stats = np.load(data_dir+'stats_commonnorm_grayscott_960traj_50steps_speciesA.npz', allow_pickle=True)
-
-
-data_dir = '/Users/ishan/JHU/Data/Loadpath_var/fiber_data_loadonly_microvar10/'
-path_ip_test = data_dir + 'inputs_test_20fiber_elastoplastic_time3lb1lfloadval4+timeid_loadonlyvar_sig11_1to4micro11to14load.npz'
-path_op_test = data_dir + 'outputs_test_20fiber_elastoplastic_time3lb1lfloadval4+timeid_loadonlyvar_sig11_1to4micro11to14load.npz'
-path_load_test = data_dir + 'loading_test_20fiber_elastoplastic_time3lb1lfloadval4+timeid_loadonlyvar_sig11_1to4micro11to14load.npz'
-stats = np.load(data_dir+'stats_commonnorm_20fiber_elastoplastic_3lb1lfloadval4+timeid_loadonlyvar_sig11_70micro1to10load.npz', allow_pickle=True)
+elif dataset == 'grayscott':
+    data_dir = '/Users/ishan/JHU/Data/HighDim_datasets/datasets/gray_scott_reaction_diffusion/data_proc/'
+    path_ip_test = data_dir + 'inputs_test_grayscott_960traj_1to50stepsinc1_speciesA_timelb5.npz'
+    path_op_test = data_dir + 'outputs_test_grayscott_960traj_1to50stepsinc1_speciesA_timelb5.npz'
+    path_load_test = data_dir + 'params_test_grayscott_960traj_1to50stepsinc1_speciesA_timelb5.npz'
+    stats = np.load(data_dir+'stats_commonnorm_grayscott_960traj_50steps_speciesA.npz', allow_pickle=True)
+    
+else:
+    data_dir = '/Users/ishan/JHU/Data/Loadpath_var/fiber_data_loadonly_microvar10/'
+    path_ip_test = data_dir + 'inputs_test_20fiber_elastoplastic_time3lb1lfloadval4+timeid_loadonlyvar_sig11_1to4micro11to14load.npz'
+    path_op_test = data_dir + 'outputs_test_20fiber_elastoplastic_time3lb1lfloadval4+timeid_loadonlyvar_sig11_1to4micro11to14load.npz'
+    path_load_test = data_dir + 'loading_test_20fiber_elastoplastic_time3lb1lfloadval4+timeid_loadonlyvar_sig11_1to4micro11to14load.npz'
+    stats = np.load(data_dir+'stats_commonnorm_20fiber_elastoplastic_3lb1lfloadval4+timeid_loadonlyvar_sig11_70micro1to10load.npz', allow_pickle=True)
+    
+    model_trained_path = "/Users/ishan/JHU/Data/Outputs/20fiber_loadonlypath_micro70loadpath10var_3lb1lf+timeid_sig11_unet_timemlpmembed_attn_commonnorm_onlymodel"
 
 
 save_path = '/Users/ishan/JHU/Data/Outputs/'  
-expt_path = '20fiber_loadpathvar_branchfnn_trunkunet_loadimgtrunkip'
+expt_path = '20fiber_loadpathvar_unet'
 full_path = save_path + expt_path
 
-##Define params
+## Define params
 timesteps = 30
 bs_train = 10
 bs_test = 12
@@ -69,19 +70,19 @@ pretrained = True
 batch_size_viz = timesteps
 data_samp = 1
 
-##Load stats 
+## Load stats 
 mean_ip = stats['arr_0'][0]['mean_ip']
 std_ip = stats['arr_0'][0]['std_ip']
 
 
-##Create train and test data loaders
+######### Create train and test data loaders   ##########
 ds_train = imgdata_loader(path_ip_train, path_op_train, path_load_train,
                           bs_train, 1, stats, shuffle = False)
 ds_test = imgdata_loader(path_ip_test, path_op_test, path_load_test, bs_test, 
                         1, stats, shuffle = False)
 
 
-
+#available_gpus = [torch.cuda.device(i) for i in range(torch.cuda.device_count())]
 if pretrained ==False:
     ##Training
     if model == 'gnn':
@@ -95,12 +96,8 @@ if pretrained ==False:
 else:
     ##Testing pre trained modesls
   for i in range(learners):
-     # model = torch.load("/Users/ishan/JHU/Data/Results/planetswe_96traj50stepsudim1_3lb1lf+timeid_unet_timemlpmembed_attn_commonnorm_onlymodel"+str(i),
-     #                    map_location = device)
-     # model = torch.load("/Users/ishan/JHU/Data/Results/grayscott_960traj1to50stepsinc1_speciesA5lb1lf+timeid_unet_timemlpmembed_attn_commonnorm_80iter_onlymodel"+str(i),
-     #                    map_location = device)
-      model = torch.load("/Users/ishan/JHU/Data/Outputs/20fiber_loadonlypath_micro70loadpath10var_3lb1lf+timeid_sig11_unet_timemlpmembed_attn_commonnorm_onlymodel"+str(i),
-                         map_location = device)
+      model = torch.load(model_trained_path + str(i), map_location = device)
+      #model = torch.nn.DataParallel(model, device_ids=[available_gpus])
       model_list.append(model)
   
     
@@ -109,26 +106,22 @@ params = []
 for i in range(learners):
     params = params + list(model_list[i].parameters())
 
-##Define optimizer and lr scheduler
+##Define optimizer and lr scheduler (optional)
 optimizer = torch.optim.Adam(params, lr=lr_init)
 scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.99)
-
 #scheduler = CosineAnnealingLR(optimizer, iterations)
 #scheduler = ReduceLROnPlateau(optimizer, 'min')
 
-
 start_time = time.time()
 train_loss, test_loss = [], []
-#available_gpus = [torch.cuda.device(i) for i in range(torch.cuda.device_count())]
-#branch_net = torch.nn.DataParallel(branch_net, device_ids=[available_gpus])
 
+## All models set to training mode
 for model in model_list:
     model.to(device)
     model.train()
 
 
-
-####Training + testing loop #########
+##########3    Training + testing loop  #########
 for i in range(iterations):
         print('\nEpoch:',i)
         t_curr = time.time()
@@ -137,15 +130,11 @@ for i in range(iterations):
             model.train(True)
         for j, data in enumerate(ds_train): 
             print('Data iteration: ', j)
-               # targets, preds = conv_forward_pass_unet(data[0], data[1], 
-               #                             data[2], deep_net2, device)
             targets, preds = addition_moe_forward_pass(data[0], data[1], data[2],
                                                   model_list, device)
             targets = torch.squeeze(targets, dim=1)
             preds = torch.squeeze(preds, dim=1)
             loss = F.mse_loss(preds, targets)
-            # loss = torch.mean(torch.square(preds-targets)/(torch.square(targets)+ 1e-4)).to(device)
-            # loss = torch.mean(torch.sum(torch.abs(targets)*torch.square(preds-targets), dim=-1)/torch.sum(targets,dim=-1))
             loss = loss.to(device)
            
             loss_train_copy += loss.item()
@@ -156,7 +145,7 @@ for i in range(iterations):
             optimizer.step()
             # scheduler.step()
 
-               ##Loss printing
+            ##Epoch time
             if True:
                 print("\nImage processed: ", (j+1)*bs_train)
                 t_curr1 = time.time()
@@ -171,8 +160,6 @@ for i in range(iterations):
 
         with torch.no_grad():
             for k, data_test in enumerate(ds_test):
-               # targets_test, preds_test = conv_forward_pass_unet(data_test[0], data_test[1], 
-               #                             data_test[2], deep_net2, device)
                 targets_test, preds_test = addition_moe_forward_pass(data_test[0], data_test[1], 
                                     data_test[2],model_list, device)
                 targets_test = torch.squeeze(targets_test, dim=1)
@@ -186,7 +173,7 @@ for i in range(iterations):
        # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, iterations)
        #scheduler.step(loss_test)
 
-##Save models
+## Save models
 for i in range(len(model_list)):
     torch.save(model_list[i], save_path + expt_path + 'model' + str(i))       
 
@@ -202,7 +189,7 @@ plt.savefig(save_path + expt_path)
 
 
 
-##Test predictions
+##########  Test predictions   ##########
 stress_preds, stress_targets, stress_br, stress_tr, stress_loads = [], [], [], [], []    
 ds_viz = imgdata_loader(path_ip_test, path_op_test, path_load_test, batch_size_viz, 
                         1, stats, shuffle = False)
@@ -213,17 +200,15 @@ start_time = time.time()
 with torch.no_grad():
     for j, data_viz in enumerate(ds_viz):
             print('Processing test sample: ', j)
-           # targets_viz, preds_viz, = recursive_pred_unet(data_viz[0], data_viz[1], 
-           #                                         data_viz[2], deep_net1, device, timesteps)
             targets_viz, preds_viz = recursive_pred_moe(data_viz[0], data_viz[1], 
-                                                        data_viz[2], model_list[3:], device, timesteps)
+                                        data_viz[2], model_list, device, timesteps)
             stress_preds.append(preds_viz.cpu().detach().numpy())
             stress_targets.append(targets_viz.cpu().numpy())
 
 end_time = time.time()
 print('Time elapsed:', end_time-start_time)
         
-##Save predictions + ground truth
+########  Save predictions + ground truth     #################3
 expt_data = []
 outputs = {}
 outputs['gt'] = stress_targets
