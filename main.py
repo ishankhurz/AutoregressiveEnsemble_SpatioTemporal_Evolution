@@ -70,35 +70,34 @@ pretrained = True
 batch_size_viz = timesteps
 data_samp = 1
 
+
+
+######### Create train and test data loaders   ##########
 ## Load stats 
 mean_ip = stats['arr_0'][0]['mean_ip']
 std_ip = stats['arr_0'][0]['std_ip']
 
-
-######### Create train and test data loaders   ##########
 ds_train = imgdata_loader(path_ip_train, path_op_train, path_load_train,
                           bs_train, 1, stats, shuffle = False)
 ds_test = imgdata_loader(path_ip_test, path_op_test, path_load_test, bs_test, 
                         1, stats, shuffle = False)
 
 
+#########  Model + training definitions   ########
+
 #available_gpus = [torch.cuda.device(i) for i in range(torch.cuda.device_count())]
 if pretrained ==False:
-    ##Training
-    if model == 'gnn':
-        deep_net = model_forward.GraphDeepONet(node_feat_size = 6, edge_feat_size = 4, output_size=n_basis, latent_size_mp=64, message_passing_steps=4, window = 1, trunk_feat_size = 6, grid_dim = 128)
-    elif model == 'cnn':
-        deep_net = model_forward_conv.ConvDeepONet(branch_feat_size = 1, output_size=n_basis, trunk_feat_size = 1, grid_dim = 128)
-    elif model == 'unet':
-        for i in range(learners):
-            deep_net = Unet2D(dim=16, out_dim = 1, dim_mults=(1, 2, 4, 8), channels = 5, ip_time_dim = 8, attn = True)
-            model_list.append(deep_net)
+    ## Training
+    for i in range(learners):
+        deep_net = Unet2D(dim=16, out_dim = 1, dim_mults=(1, 2, 4, 8), channels = 5, ip_time_dim = 8, attn = True)
+        #deep_net = torch.nn.DataParallel(deep_net, device_ids=[available_gpus])
+        model_list.append(deep_net)
 else:
     ##Testing pre trained modesls
-  for i in range(learners):
-      model = torch.load(model_trained_path + str(i), map_location = device)
-      #model = torch.nn.DataParallel(model, device_ids=[available_gpus])
-      model_list.append(model)
+    for i in range(learners):
+        model = torch.load(model_trained_path + str(i), map_location = device)
+        #model = torch.nn.DataParallel(model, device_ids=[available_gpus])
+        model_list.append(model)
   
     
 
@@ -106,7 +105,7 @@ params = []
 for i in range(learners):
     params = params + list(model_list[i].parameters())
 
-##Define optimizer and lr scheduler (optional)
+## Define optimizer and lr scheduler (optional)
 optimizer = torch.optim.Adam(params, lr=lr_init)
 scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.99)
 #scheduler = CosineAnnealingLR(optimizer, iterations)
@@ -121,7 +120,7 @@ for model in model_list:
     model.train()
 
 
-##########3    Training + testing loop  #########
+##########    Training + testing loop  #########
 for i in range(iterations):
         print('\nEpoch:',i)
         t_curr = time.time()
