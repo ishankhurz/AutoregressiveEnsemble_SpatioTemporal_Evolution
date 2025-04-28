@@ -4,10 +4,12 @@ Autoregressive  approach for trajectory prediction in spatiotemporal systems usi
 
 Training:
 
+
 Inference:
 
 
 Datasets:
-1.
-2.
-3.
+1. Computational mechanics: 2-Phase microstructure
+2. Biochemical system: Gray-Scott reaction diffusion
+3. Atmospherical dynamics: Planet Shallow Water Equation 
+  
