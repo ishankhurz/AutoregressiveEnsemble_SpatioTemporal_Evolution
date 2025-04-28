@@ -17,7 +17,7 @@ import model_forward, model_forward_conv
 #from torch.utils.data import TensorDataset, DataLoader
 from utils import (imgdata_loader, save_checkpoint, conv_forward_pass_unet, 
                    recursive_pred_unet, recursive_pred_moe, addition_moe_forward_pass)
-from unet_2d import Unet2D
+from models import Unet2D
 
 
 ##Set device
