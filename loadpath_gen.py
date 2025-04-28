@@ -45,21 +45,20 @@ for i in range(n_paths):
         interp_loc_discrete[i,j] = interp_curr
         
 ## Interpolate with discrete values to obtain full load path
-load_path_linear = np.zeros((n_paths, n_steps_approx))
+#load_path_linear = np.zeros((n_paths, n_steps_approx))
 load_path_ps = np.zeros((n_paths, n_steps_approx))
 for i in range(n_paths):
     ps = PchipInterpolator(X, load_path_discrete[i,:])
     load_path_ps[i] = ps(np.linspace(0,1,n_steps_approx))
-    load_path_linear[i,:] = np.interp(np.linspace(0,1,n_steps_approx), X, load_path_discrete[i])
-
+   
 ## Convert load paths to % strain values
-ll = 100*0.004*load_path_linear[:,:]/8 
 ll_ps = 100*0.004*load_path_ps[:,:]/8 
+#np.save('/Users/ishan/JHU/Data/Loadpath_var/Loadpath_specs/loadonly_simpar140220_pchipinterp5.npy', ll_ps)
 
-mm = np.mean(ll,axis=0)
-ss=np.std(ll,axis=0)
-min_val = np.min(ll,axis=0)
-max_val = np.max(ll, axis=0)
+mm = np.mean(ll_ps,axis=0)
+ss=np.std(ll_ps,axis=0)
+min_val = np.min(ll_ps,axis=0)
+max_val = np.max(ll_ps, axis=0)
 
 ## Load path(s) Visualziation
 plt.plot(np.arange(100), mm, label = 'Average value at step t')
