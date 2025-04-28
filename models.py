@@ -1,4 +1,4 @@
-## Code imported from DiTTO paper by Ovadia et al.
+## Code adapted from DiTTO paper by Ovadia et al.
 ## Ovadia, Oded, et al. "Real-time inference and extrapolation via a diffusion-inspired 
 ## temporal transformer operator (DiTTO)." arXiv preprint arXiv:2307.09072 (2023).
 
@@ -13,7 +13,7 @@ from einops import rearrange, reduce
 from einops.layers.torch import Rearrange
 
 
-## helper functions
+####  helper functions   #####
 
 def exists(x):
     return x is not None
@@ -55,7 +55,7 @@ def normalize_to_neg_one_to_one(img):
 def unnormalize_to_zero_to_one(t):
     return (t + 1) * 0.5
 
-## Residual
+## Residual connection
 
 class Residual(nn.Module):
     def __init__(self, fn):
@@ -119,9 +119,10 @@ class PreNorm(nn.Module):
             return self.fn(x)
         else:
             return x
-
+        
+        
+####  Specific blocks ########
 ## sinusoidal positional embedding
-
 class SinusoidalPosEmb(nn.Module):
     def __init__(self, dim):
         super().__init__()
@@ -205,7 +206,7 @@ class ResnetBlock(nn.Module):
 
         return h + self.res_conv(x)
 
-## Attention module for intermediate layers
+## Attention module for intermediate layers (temporal concatenation)
 class LinearAttention(nn.Module):
     def __init__(self, dim, heads = 4, dim_head = 32):
         super().__init__()
@@ -243,7 +244,7 @@ class LinearAttention(nn.Module):
         return self.to_out(out)
 
 
-## Attention module for bottleneck layer
+## Attention module for bottleneck layer        (Spatial concatenation)
 class Attention(nn.Module):
     def __init__(self, dim, heads = 4, dim_head = 32):
         super().__init__()
@@ -292,7 +293,7 @@ class moe_gate_network(nn.Module):
         return self.conv_block(x)
             
 
-# Full UNet model
+#########  Full UNet model ##############3
 class Unet2D(nn.Module):
     def __init__(
         self,
@@ -314,8 +315,7 @@ class Unet2D(nn.Module):
     ):
         super().__init__()
 
-        # determine dimensions
-      
+        ## determine dimensions
         self.ip_time_dim = ip_time_dim
         self.channels = channels
         self.self_condition = self_condition
@@ -329,10 +329,8 @@ class Unet2D(nn.Module):
 
         block_klass = partial(ResnetBlock, groups = resnet_block_groups)
 
-        # time embeddings
-
+        ## time embedding
         time_dim = dim * 4
-
         self.random_or_learned_sinusoidal_cond = learned_sinusoidal_cond or random_fourier_features
 
         if self.random_or_learned_sinusoidal_cond:
@@ -354,7 +352,7 @@ class Unet2D(nn.Module):
            # sinu_pos_emb = SinusoidalPosEmb(self.ip_time_dim)
            # fourier_dim = dim
         
-        ##Time ID sinusoidal embedding 
+        ## Time ID sinusoidal embedding 
         self.time_emb_mlp = nn.Sequential(
             sinu_pos_emb,
             nn.Linear(int(2*ip_timeid_dim), int(time_dim/2)),
@@ -364,7 +362,7 @@ class Unet2D(nn.Module):
         )
        
 
-        ##TIme variable MLP embedding
+        ## TIme variable MLP embedding
         if dataset == 'micro' or  dataset == 'grayscott':
             self.time_var_mlp = nn.Sequential(
                 nn.Linear(ip_time_var, int(time_dim/2)),
@@ -372,7 +370,7 @@ class Unet2D(nn.Module):
                 nn.Linear(int(time_dim/2), int(time_dim/2))
             )
         
-        # Define intermediate layers
+        ## Define intermediate layers
         self.downs = nn.ModuleList([])
         self.ups = nn.ModuleList([])
         num_resolutions = len(in_out)
@@ -409,6 +407,7 @@ class Unet2D(nn.Module):
         self.final_res_block = block_klass(dim * 2, dim, time_emb_dim = time_dim)
         self.final_conv = nn.Conv2d(dim, self.out_dim, 1)
     
+    
     def get_grid(self, shape, device='cuda'):
         batchsize, size_x, size_y = shape[0], shape[2], shape[3]
         gridx = torch.tensor(np.linspace(0, 1, size_x), dtype=torch.float)
@@ -416,19 +415,14 @@ class Unet2D(nn.Module):
         gridy = torch.tensor(np.linspace(0, 1, size_y), dtype=torch.float)
         gridy = gridy.reshape(1, 1, size_y, 1).repeat([batchsize, size_x, 1, 1])
         return torch.cat((gridx, gridy), dim=-1).to(device)
-
-    def forward(self, x, time, x_self_cond = None, use_grid=False):
-        if self.self_condition:
-            x_self_cond = default(x_self_cond, lambda: torch.zeros_like(x))
-            x = torch.cat((x_self_cond, x), dim = 1)
-
-        if self.channels == 3 and use_grid:
-            grid = self.get_grid(x.shape, x.device).permute(0, 3, 1, 2)
-            x = torch.cat((x, grid), dim=1)
+    
+    ## Forward pass for UNet
+    def forward(self, x, time):
         x = self.init_conv(x)
         r = x.clone()
         
-        mlp = True           ##MLP embedding
+        ##MLP embedding
+        mlp = True           
         if mlp:
             dataset = 'micro'
             if dataset  == 'micro':
@@ -450,7 +444,7 @@ class Unet2D(nn.Module):
 
         h = []
         
-        
+        ## Forward pass
         for block1, block2, attn, downsample in self.downs:
             x = block1(x, t)
             h.append(x)
