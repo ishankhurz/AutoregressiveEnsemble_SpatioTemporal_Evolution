@@ -8,50 +8,31 @@ Created on Tue Sep 17 09:37:31 2024
 
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.metrics import r2_score
-import scipy
-from scipy.signal import correlate
-#from skimage.metrics import structural_similarity as ssim
-
-def r2_score_calc(targets, preds):
-    del_Z = np.sum((preds.reshape(128,-1) - targets.reshape(128,-1))**2)
-    norm = np.sum(targets)/16384
-    Z = np.sum((targets - norm)**2)
-    return 1 - (del_Z/Z)
- 
 
 
-##########################Load stats##################
-##Micro
-data_dir = '/Users/ishan/JHU/Data/Loadpath_var/fiber_data_loadonly_microvar10/'
-stats = np.load(data_dir+'stats_commonnorm_20fiber_elastoplastic_3lb1lfloadval4+timeid_loadonlyvar_sig11_70micro1to10load.npz', allow_pickle=True)
-mean_ip = stats['arr_0'][0]['mean_ip']
-std_ip = stats['arr_0'][0]['std_ip']
+########################## Load stats ##################
+## Micro
+#data_dir = '/Users/ishan/JHU/Data/Loadpath_var/fiber_data_loadonly_microvar10/'
 
-##Gray-Scott reaction diffusion
-data_dir = '/Users/ishan/JHU/Data/HighDim_datasets/datasets/gray_scott_reaction_diffusion/data_proc/'
-stats = np.load(data_dir+'stats_commonnorm_grayscott_960traj_50steps_speciesA.npz', allow_pickle=True)
-mean_ip = stats['arr_0'][0]['mean_ip']
-std_ip = stats['arr_0'][0]['std_ip']
+## Gray-Scott reaction diffusion
+#data_dir = '/Users/ishan/JHU/Data/HighDim_datasets/datasets/gray_scott_reaction_diffusion/data_proc/'
 
-##Planet-SWE
+## Planet-SWE
 data_dir = '/Users/ishan/JHU/Data/HighDim_datasets/datasets/planetswe/data_proc/'
+
+
 stats = np.load(data_dir+'stats_commonnorm_planetswe_96traj_50steps_udim1.npz', allow_pickle=True)
 mean_ip = stats['arr_0'][0]['mean_ip']
 std_ip = stats['arr_0'][0]['std_ip']
 
-##Load data
-load=True
-if load:
-    data = np.load('/Users/ishan/JHU/Data/Outputs/planetswe_moepreds_udim1.npz', allow_pickle=True)
-    targets_moe = data['arr_0'][0]['gt']
-    preds_moe = data['arr_0'][0]['preds']
+## Load stored predictions
+data = np.load('/Users/ishan/JHU/Data/Outputs/planetswe_moepreds_udim1.npz', allow_pickle=True)
+targets_moe = data['arr_0'][0]['gt']
+preds_moe = data['arr_0'][0]['preds']
 
-  
     
 ###################### Metric computation #################
 stress_preds, stress_targets = preds_moe, targets_moe
-#std_ip, mean_ip = std_micro, mean_micro
 img_dim1 = stress_preds[0].shape[1]
 img_dim2 = stress_preds[0].shape[2]
 eps=1e-7
@@ -60,14 +41,11 @@ pred_shape = len(stress_preds[0])
 diff_org = np.zeros((samples, pred_shape, img_dim1, img_dim2))
 mean_error = np.zeros((samples, pred_shape))
 mean_error_rel = np.zeros((samples, pred_shape))
-mean_error_fib = np.zeros((samples, pred_shape))
-mean_error_mat = np.zeros((samples, pred_shape))
 mean_fib = np.zeros((samples, pred_shape))
 mean_mat = np.zeros((samples, pred_shape))
 max_error = np.zeros((samples, pred_shape))
 mean_stress_target = np.zeros((samples, pred_shape))
 mean_stress_pred = np.zeros((samples, pred_shape))
-r2 = np.zeros((samples,pred_shape))
 diff_norm = np.zeros((samples, pred_shape))
 diff_l2norm = np.zeros((samples, pred_shape))
 diff_l2norm_avg = np.zeros((samples, pred_shape))
@@ -81,33 +59,22 @@ for samp in range(samples):
     for i in range(pred_shape):
         
         ind = i
-        #inds_fib = np.where(micro>0)
-        #inds_mat = np.where(micro==0)
         preds = stress_preds[samp][ind]*std_ip + mean_ip
         targets = stress_targets[samp][ind,0]*std_ip + mean_ip
-        
-        #ssim_score[samp,i] = ssim(preds, targets, multichannel=True, data_range=targets.max() - targets.min())
-       # r2[samp, i] = r2_score_calc(targets, preds)
         mean_stress_target[samp, i] = np.mean(targets)
         mean_stress_pred[samp, i] = np.mean(preds)
         diff_org[samp,i] = preds-targets
         diff = np.abs(preds - targets)
         diff_std[samp,i] = np.std(diff)
-        #mean_relmax[samp,i] = np.mean((preds-targets)**2)/(np.max(targets)-np.min(targets))**2
-        mean_relmax[samp,i] = np.mean((preds-targets)**2)
-        #mean_relmax[samp,i] = np.mean(np.abs(preds-targets))/(np.max(targets)-np.min(targets))
-        
+        mean_relmax[samp,i] = np.mean((preds-targets)**2)  
         diff_l2norm[samp, i] = np.sqrt(np.sum((preds.reshape(img_dim1,-1) - targets.reshape(img_dim1,-1))**2))/np.sqrt(np.sum(targets**2))
         diff_l2norm_avg[samp, i] = np.sqrt(np.sum((mean_stress_pred - mean_stress_target)**2))/np.sqrt(np.sum(mean_stress_target)**2)
         mean_error[samp, i] = np.mean(diff)
         mean_error_rel[samp, i] = np.mean(diff/np.max(targets))
         max_val[samp,i] = np.max(targets)
         vrmse[samp,i] = np.sqrt(np.mean(np.square(preds-targets))/(np.mean(np.square(targets-np.mean(targets)))+eps))
-        #mean_error_fib[samp, i] = np.mean(diff_fib)
-        #mean_error_mat[samp, i] = np.mean(diff_mat)
         max_error[samp, i] = np.max(np.abs(diff))
     l2metric[samp] = np.max(diff_l2norm)
-   # max_val[samp] = np.max(mean_stress_target)
     
 mae_avgpred = np.mean(np.abs(mean_stress_pred - mean_stress_target))
 mae_mm_3 = np.mean(mean_error,axis=0)
@@ -123,11 +90,10 @@ mae_ss2 = np.std(mean_error, axis=0)
 
 ####Individual predictions viz###########
 plt.rcParams['font.size'] = 18
-plt.rcParams['font.size'] = 14
 plt.rcParams['lines.linewidth'] = 3
 
 
-##Fig 2
+## Fig 2
 ll=loadpaths*0.4/8
 plt.plot(loadpaths[0]*0.4/8, linewidth=4, marker='o', markevery=[0,49,99], markerfacecolor = 'red', markersize=15)
 #plt.plot(loadpaths[1]*0.4/8, linewidth=3, linestyle = '-.')
@@ -140,15 +106,15 @@ plt.xlabel('Time step')
 plt.ylabel('% strain')
 
 
-##Fig 3
+## Fig 3
 plt.imshow(tt[20,44,0,:,:], origin='lower')
 plt.colorbar()
 
-##Fig 4
+## Fig 4
 plt.imshow(tt[0,12,0,:,:], origin='lower')
 plt.colorbar()
 
-##Fig 5-7
+## Fig 5-7
 ##micro viz ind 0 ; GS rxn viz ind 20 ;  Planet SWE viz ind 0 
 pp = grayscott_moepreds_sconcA*std_ip + mean_ip
 tt = grayscott_gt_sconcA*std_ip + mean_ip
@@ -165,7 +131,7 @@ plt.yticks([])
 plt.colorbar(im, ax=[ax1, ax2]) ##Common colobar for ax1 and ax2; aspect used to set colorbar thickness/width
 
 
-##Fig 8
+## Fig 8
 plt.figure()
 plt.plot(np.arange(3,33,1), dd_moe[:30], 'o', label = 'MoE')
 plt.plot(np.arange(3,33,1), dd0[:30], label = 'Model-1')
@@ -176,7 +142,7 @@ plt.xlabel('Time-step')
 plt.ylabel('Rel L2 error')
 plt.legend(loc='upper left')
 
-##Fig 9
+## Fig 9
 plt.figure()
 plt.plot(np.arange(3,33,1), mm_moe[:30], 'o', label = 'MoE')
 plt.plot(np.arange(3,33,1), mm0[:30], label = 'Model-1')
@@ -188,7 +154,7 @@ plt.ylabel('Mean abs. error')
 plt.legend(loc='upper left')
 
 
-##Fig 10
+## Fig 10
 plt.figure()
 plt.plot(np.arange(5,50,1), dd2_sum, label = '2 - MoE')
 plt.plot(np.arange(5,50,1), dd4_sum, label = '4 - MoE')
