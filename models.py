@@ -206,7 +206,7 @@ class ResnetBlock(nn.Module):
 
         return h + self.res_conv(x)
 
-## Attention module for intermediate layers (temporal concatenation)
+## Attention module for intermediate layers (temporal)
 class LinearAttention(nn.Module):
     def __init__(self, dim, heads = 4, dim_head = 32):
         super().__init__()
@@ -244,7 +244,7 @@ class LinearAttention(nn.Module):
         return self.to_out(out)
 
 
-## Attention module for bottleneck layer        (Spatial concatenation)
+## Attention module for bottleneck layer        (Spatial)
 class Attention(nn.Module):
     def __init__(self, dim, heads = 4, dim_head = 32):
         super().__init__()
