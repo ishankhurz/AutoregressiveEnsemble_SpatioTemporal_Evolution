@@ -162,8 +162,7 @@ for i in range(epochs):
        #scheduler.step(loss_test)
 
 ## Save models
-for i in range(len(model_list)):
-    torch.save(model_list[i], save_path + expt_path + 'model' + str(i))       
+torch.save(deep_net, save_path + expt_path + 'model0')       
 
 
 ###### Metric viz ##########
