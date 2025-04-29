@@ -74,7 +74,12 @@ def addition_moe_forward_pass(inputs, loading, outputs, model_list, device):
     preds = torch.zeros(dims)
     for i in range(len(model_list)):
         preds[i] =  model_list[i](tr_ip, br_ip).to(device)
-    preds_add = torch.mean(preds, dim=0)
+    
+    ## if training multiple models in a single run, modify here
+    if len(model_list) == 1:
+        preds_add = preds
+    else:
+        preds_add = torch.mean(preds, dim=0)
   
     return targets, preds_add
 
@@ -102,17 +107,19 @@ def load_checkpoint(model, optimizer, load_path):
 def recursive_pred_unet(inputs, loading, outputs, model, device, timesteps):
     br_ip= (loading).to(torch.float32).contiguous().to(device)
     n_loads = br_ip.shape[-1]
-   # targets = (outputs).to(torch.float32).to(device)
-    preds_recursive = torch.zeros((timesteps,128,128))
+    targets = (outputs).to(torch.float32).to(device)
+    img_dim1, img_dim2 = targets.shape[-2], targets.shape[-1]
+    preds_recursive = torch.zeros((timesteps,img_dim1,img_dim2))
     prompt = (inputs[0]).to(torch.float32).contiguous().to(device)
-    prompt = prompt.reshape(1,-1, 128,128)
+    prompt = prompt.reshape(1,-1, img_dim1, img_dim2)
     for i in range(timesteps):
-        preds = model(prompt.reshape(1,-1, 128,128), 
+        preds = model(prompt.reshape(1,-1, img_dim1, img_dim2), 
                                     br_ip[i].reshape(-1,n_loads))
         prompt = torch.cat((prompt[:,1:,:,:], preds), dim=1)
         preds_recursive[i] = preds
     preds_recursive = preds_recursive.to(device)
     return outputs, preds_recursive
+
 
 ##Recursive prediction with ensemble approach
 def recursive_pred_moe(inputs, loading, outputs, model_list, device, timesteps):
