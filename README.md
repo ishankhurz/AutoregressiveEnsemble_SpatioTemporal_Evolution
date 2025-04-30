@@ -6,9 +6,9 @@ Manuscript in preparation (authors: Ishan Khurjekar, Indrashish Saha, Somdatta G
 
 
 ## Training: 
-Data: Tuples of {x_{i}(t-k:k), e_{i:k}(t-k:t+1), y_{i}(t+1)} where x is input field, e is external time-dependent variable, and y is output field
-Collect data tuples for all t on the simulation trajectory (t = K, K + 1 .... T)
-Procedure: Train individual models for the same task and with same data in parallel with random initialization of weights
+1. Data: Tuples of {x_{i}(t-k:k), e_{i:k}(t-k:t+1), y_{i}(t+1)} where x is input field, e is external time-dependent variable, and y is output field
+2. Collect data tuples for all t on the simulation trajectory (t = K, K + 1 .... T)
+3. Procedure: Train individual models for the same task and with same data in parallel with random initialization of weights
 
 
 ## Inference: 
