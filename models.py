@@ -2,6 +2,7 @@
 ## Ovadia, Oded, et al. "Real-time inference and extrapolation via a diffusion-inspired 
 ## temporal transformer operator (DiTTO)." arXiv preprint arXiv:2307.09072 (2023).
 
+
 import math
 from functools import partial
 
