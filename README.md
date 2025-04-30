@@ -2,6 +2,9 @@
 
 Project summary: Systems governed by partial differential equations are commonplace in scientific fields. We propose a machine learning ensemble approach for reduced error accumulation while using an autoregressive strategy. Specifically, multiple models with randomly initialized weights are trained in parallel for the same task of predicting the next state of the system given information from previous time steps. During inference, the model predictions are averaged and fed back into the model to obtain predictions for the future timesteps and the ground truth for only the first K time-steps is required to predict the full trajectory, saving computation time. 
 
+Manuscript in preparation (authors: Ishan Khurjekar, Indrashish Saha, Somdatta Goswami, Lori Graham Brady)
+
+
 ## Training: 
 Data: Tuples of {x_{i}(t-k:k), e_{i:k}(t-k:t+1), y_{i}(t+1)} where x is input field, e is external time-dependent variable, and y is output field
 Collect data tuples for all t on the simulation trajectory (t = K, K + 1 .... T)
@@ -20,10 +23,11 @@ Procedure: Train individual models for the same task and with same data in paral
 2. Biochemical system: Gray-Scott reaction diffusion [2]
 3. Atmospherical dynamics: Planet Shallow Water Equation [3]
 
-Manuscript being prepared (authors: Ishan Khurjekar, Indrashish Saha, Somdatta Goswami, Lori Graham Brady)
 
-## References
+## Dataset references
 [1] DOI to be updated
+
 [2] Gray, Peter, and Stephen K. Scott. "Autocatalytic reactions in the isothermal, continuous stirred tank reactor: Oscillations and instabilities in the system A+ 2B→ 3B; B→ C." Chemical Engineering Science 39.6 (1984): 1087-1097.
+
 [3] McCabe, Michael, et al. "Towards stability of autoregressive neural operators." arXiv preprint arXiv:2306.10619 (2023).
   
