@@ -17,7 +17,7 @@ import torch.nn.functional as F
 #from torch.utils.data import TensorDataset, DataLoader
 from utils import (imgdata_loader, recursive_pred_unet, conv_forward_pass_unet,
                    addition_moe_forward_pass)
-from models import Unet2D
+from unet_2d import Unet2D
 
 
 ## Set device
